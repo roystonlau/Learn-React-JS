@@ -2,9 +2,8 @@ import Axios from 'axios'
 import React, { useEffect, useContext, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import LoadingDotIcon from './LoadingDotIcon'
-import Post from './Post'
 
-export default function ProfilePost() {
+export default function ProfileFollowers() {
   const { username } = useParams()
   console.log(username)
   const [isLoading, setIsLoading] = useState(true)
@@ -15,7 +14,7 @@ export default function ProfilePost() {
 
     async function fetchPost() {
       try {
-        const response = await Axios.get(`/profile/${username}/posts`, {
+        const response = await Axios.get(`/profile/${username}/followers`, {
           cancelToken: cancelTokenSource.token,
         })
         setPosts(response.data)
@@ -33,8 +32,17 @@ export default function ProfilePost() {
   if (isLoading) return <LoadingDotIcon />
   return (
     <div className="list-group">
-      {posts.map((post) => {
-        return <Post post={post} key={post._id} noAuthor={true} />
+      {posts.map((follower, index) => {
+        return (
+          <Link
+            to={`/profile/${follower.username}`}
+            key={index}
+            className="list-group-item list-group-item-action"
+          >
+            {(follower, username)}
+            <img className="avatar-tiny" src={follower.avatar} />{' '}
+          </Link>
+        )
       })}
     </div>
   )

@@ -1,23 +1,62 @@
 import React, { useState } from 'react'
 import Page from './Page'
 import Axios from 'axios'
+import { useImmerReducer } from 'use-immer'
 
 export default function HomeGuest() {
-  const [username, setUsername] = useState()
-  const [email, setEmail] = useState()
-  const [password, setPassword] = useState()
+  const initialState = {
+    username: {
+      value: '',
+      hasErrors: false,
+      message: '',
+      isUnique: false,
+      checkCount: 0,
+    },
+    email: {
+      value: '',
+      hasErrors: false,
+      message: '',
+      isUnique: false,
+      checkCount: 0,
+    },
+    password: { value: '', hasErrors: false, message: '', checkCount: 0 },
+    submitCount: 0,
+  }
+  function ourReducer(draft, action) {
+    switch (action.key) {
+      case 'usernameImmediately':
+        draft.username.hasErrors = false
+        draft.username.value = action.value
+        break
+      case 'usernameAfterDelay':
+        break
+      case 'usernameAfterDelay':
+        break
+      case 'emailImmediately':
+        draft.email.hasErrors = false
+        draft.email.value = action.value
+        break
+      case 'emailUniqueResults':
+        break
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    try {
-      await Axios.post('/register', {
-        username,
-        email,
-        password,
-      })
-    } catch (e) {
-      console.log(e.response.data)
+      case 'usernameUniqueResults':
+        break
+      case 'passwordImmediately':
+        draft.password.hasErrors = false
+        draft.password.value = action.value
+        break
+      case 'passwordAfterDelay':
+        break
+      case 'submitForm':
+        break
+      default:
+        break
     }
+  }
+
+  const [state, dispatch] = useImmerReducer(ourReducer, initialState)
+  function handleSubmit(e) {
+    e.preventDefault()
   }
   return (
     <Page title="Welcome!" wide={true}>
@@ -39,7 +78,10 @@ export default function HomeGuest() {
               </label>
               <input
                 onChange={(e) => {
-                  setUsername(e.target.value)
+                  dispatch({
+                    type: 'usernameImmediately',
+                    value: e.target.value,
+                  })
                 }}
                 id="username-register"
                 name="username"
@@ -55,7 +97,7 @@ export default function HomeGuest() {
               </label>
               <input
                 onChange={(e) => {
-                  setEmail(e.target.value)
+                  dispatch({ type: 'emailImmediately', value: e.target.value })
                 }}
                 id="email-register"
                 name="email"
@@ -71,7 +113,10 @@ export default function HomeGuest() {
               </label>
               <input
                 onChange={(e) => {
-                  setPassword(e.target.value)
+                  dispatch({
+                    type: 'passwordImmediately',
+                    value: e.target.value,
+                  })
                 }}
                 id="password-register"
                 name="password"
