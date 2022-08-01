@@ -1,29 +1,30 @@
-import React, { useState, useReducer, useEffect } from 'react'
+import React, { useState, useReducer, useEffect, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { useImmerReducer } from 'use-immer'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { CSSTransition } from 'react-transition-group'
 import Axios from 'axios'
+Axios.defaults.baseURL = 'http://localhost:8080'
+
 import StateContext from '../StateContext'
 import DispatchContext from '../DispatchContext'
-import { useImmerReducer } from 'use-immer'
-import { CSSTransition } from 'react-transition-group'
 
 // My Components
-import Search from '../components/Search'
+import LoadingDotsIcon from '../components/LoadingDotIcon'
 import Header from '../components/Header'
 import HomeGuest from '../components/HomeGuest'
+import Home from '../components/Home'
 import Footer from '../components/Footer'
 import About from '../components/About'
 import Terms from '../components/Terms'
-import Home from '../components/Home'
-import CreatePost from '../components/CreatePost'
-import ViewSinglePost from '../components/ViewSinglePost'
+const CreatePost = React.lazy(() => import('../components/CreatePost'))
+const ViewSinglePost = React.lazy(() => import('../components/ViewSinglePost'))
+const Search = React.lazy(() => import('../components/Search'))
+const Chat = React.lazy(() => import('../components/Chat'))
 import FlashMessages from '../components/FlashMessages'
 import Profile from '../components/Profile'
 import EditPost from '../components/EditPost'
 import NotFound from '../components/NotFound'
-import Chat from '../components/Chat'
-
-Axios.defaults.baseURL = 'http://localhost:8080'
 
 function Main() {
   const initialState = {
@@ -38,47 +39,41 @@ function Main() {
     isChatOpen: false,
     unreadChatCount: 0,
   }
-  function reducerfunct(draft, action) {
+
+  function ourReducer(draft, action) {
     switch (action.type) {
       case 'login':
         draft.loggedIn = true
         draft.user = action.data
-        break
-
+        return
       case 'logout':
         draft.loggedIn = false
-        break
+        return
       case 'flashMessage':
         draft.flashMessages.push(action.value)
-        break
-
+        return
       case 'openSearch':
         draft.isSearchOpen = true
-        break
+        return
       case 'closeSearch':
         draft.isSearchOpen = false
-        break
-
+        return
       case 'toggleChat':
         draft.isChatOpen = !draft.isChatOpen
-        break
-
+        return
       case 'closeChat':
         draft.isChatOpen = false
-        break
+        return
       case 'incrementUnreadChatCount':
         draft.unreadChatCount++
-        break
-
+        return
       case 'clearUnreadChatCount':
         draft.unreadChatCount = 0
-        break
-      default:
-        break
+        return
     }
   }
 
-  const [state, dispatch] = useImmerReducer(reducerfunct, initialState)
+  const [state, dispatch] = useImmerReducer(ourReducer, initialState)
 
   useEffect(() => {
     if (state.loggedIn) {
@@ -92,40 +87,74 @@ function Main() {
     }
   }, [state.loggedIn])
 
+  // Check if token has expired or not on first render
+  useEffect(() => {
+    if (state.loggedIn) {
+      const ourRequest = Axios.CancelToken.source()
+      async function fetchResults() {
+        try {
+          const response = await Axios.post(
+            '/checkToken',
+            { token: state.user.token },
+            { cancelToken: ourRequest.token },
+          )
+          if (!response.data) {
+            dispatch({ type: 'logout' })
+            dispatch({
+              type: 'flashMessage',
+              value: 'Your session has expired. Please log in again.',
+            })
+          }
+        } catch (e) {
+          console.log('There was a problem or the request was cancelled.')
+        }
+      }
+      fetchResults()
+      return () => ourRequest.cancel()
+    }
+  }, [])
+
   return (
     <StateContext.Provider value={state}>
       <DispatchContext.Provider value={dispatch}>
         <BrowserRouter>
           <FlashMessages messages={state.flashMessages} />
           <Header />
-          <Routes>
-            <Route path="/profile/:username/*" element={<Profile />} />
-            <Route
-              path="/"
-              element={state.loggedIn ? <Home /> : <HomeGuest />}
-            />
-            <Route path="/post/:id" element={<ViewSinglePost />} />
-            <Route path="/post/:id/edit" element={<EditPost />} />
-            <Route path="/create-post" element={<CreatePost />} />
-            <Route path="/about-us" element={<About />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<LoadingDotsIcon />}>
+            <Routes>
+              <Route path="/profile/:username/*" element={<Profile />} />
+              <Route
+                path="/"
+                element={state.loggedIn ? <Home /> : <HomeGuest />}
+              />
+              <Route path="/post/:id" element={<ViewSinglePost />} />
+              <Route path="/post/:id/edit" element={<EditPost />} />
+              <Route path="/create-post" element={<CreatePost />} />
+              <Route path="/about-us" element={<About />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
           <CSSTransition
             timeout={330}
             in={state.isSearchOpen}
             classNames="search-overlay"
             unmountOnExit
           >
-            <Search />
+            <div className="search-overlay">
+              <Suspense fallback="">
+                <Search />
+              </Suspense>
+            </div>
           </CSSTransition>
-          <Chat />
+          <Suspense fallback="">{state.loggedIn && <Chat />}</Suspense>
           <Footer />
         </BrowserRouter>
       </DispatchContext.Provider>
     </StateContext.Provider>
   )
 }
+
 const root = ReactDOM.createRoot(document.querySelector('#app'))
 root.render(<Main />)
 

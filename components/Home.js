@@ -1,7 +1,7 @@
 import React, { useContext, useEffect } from 'react'
 import Page from './Page'
 import StateContext from '../StateContext'
-import { useImmer } from 'use-Immer'
+import { useImmer } from 'use-immer'
 import LoadingDotIcon from './LoadingDotIcon'
 import Axios from 'axios'
 import { Link } from 'react-router-dom'

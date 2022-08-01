@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom'
 import DispatchContext from '../DispatchContext'
 import { useImmer } from 'use-immer'
 import io from 'socket.io-client'
-const socket = io('http://localhost:8080')
+import { current } from 'immer'
 
 export default function Chat() {
+  const socket = useRef(null)
   const chatField = useRef(null)
   const chatLog = useRef(null)
   const appState = useContext(StateContext)
@@ -31,11 +32,15 @@ export default function Chat() {
   }
 
   useEffect(() => {
+    socket.current = io('http://localhost:8080')
     socket.on('chatFromServer', (message) => {
       setState((draft) => {
         draft.chatMessages.push(message)
       })
     })
+    return () => {
+      socket.disconnect()
+    }
   }, [])
 
   useEffect(() => {
